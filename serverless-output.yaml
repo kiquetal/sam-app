@@ -27,7 +27,7 @@ Outputs:
 Resources:
   HelloWorldFunction:
     Properties:
-      CodeUri: s3://edge-lambda-s3/af702e02ccb96e673e600b11f18d0e17
+      CodeUri: s3://edge-lambda-s3/0bff9cd5d1c97cf1e87c9cf5efaf2ba1
       Environment:
         Variables:
           PARAM1: VALUE

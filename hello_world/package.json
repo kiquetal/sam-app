@@ -7,9 +7,11 @@
   "author": "SAM CLI",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.18.0"
+    "axios": "^0.18.0",
+    "npm": "^6.4.1"
   },
   "scripts": {
+    "execute": "node hola.js",
     "test": "mocha tests/unit/"
   },
   "devDependencies": {

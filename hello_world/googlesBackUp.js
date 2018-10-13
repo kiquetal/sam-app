@@ -3,7 +3,7 @@ var async = require('async');
 var doc = new GoogleSpreadsheet('1OVoSmZ_WSM2q9iyR2Cdrgd37dmSI5vbx9mCop2yBIXc');
 var sheet;
 
-var allEntries=[];
+
 exports.handler=function (event,context,callback)
 {
     return obtainFeedJira(callback);
@@ -14,13 +14,14 @@ exports.handler=function (event,context,callback)
 
 
 
+
 var developers=["enrique.melgarejo","felipe.hermosilla","jose.colman","andrea.forneron","luis.encina","jaqueline.probst","miguel.godoy","jorge.vallejos","ignacio.rojas","christian.benitez","juan.talavera"];
 //var developers=["enrique.melgarejo","felipe.hermosilla"];
 //obtainFeedJira();
 
 function testDate()
 {
-    var moment=require('momcleent');
+    var moment=require('moment');
     var a = moment().subtract(1,'day');
     var b = moment();
 
@@ -101,7 +102,7 @@ function obtainFeedJira(callback) {
 
     },function (error) {
         if (error) {
-            console.log("[FeedJIRA ERROR] " + error.toLocaleString());
+            console.log("[FeedJIRA] " + error.toLocaleString());
             var response = {
                 "statusCode": 200,
                 "headers": {
@@ -124,43 +125,7 @@ function obtainFeedJira(callback) {
                 "body": JSON.stringify({"status":"NO ERROR"}),
                 "isBase64Encoded": false
             };
-
-
-            async.eachSeries(allEntries,function (v,cb) {
-
-                var sheetByUser=sheet.filter(function (v,i,s){
-                    return v.title=="Summary";
-                });
-
-                setTimeout(function() {
-                    sheetByUser[0].addRow(v, function (err, res) {
-
-                        if (err) {
-                            console.log("imposible agregegar row" + err);
-                        }
-                        else {
-                            console.log("summary ok");
-                        }
-
-                    });
-                    cb();
-                },250);
-
-            },function (err)
-            {
-                if (err)
-                {
-                    callback(err,response);
-
-                    console.log("NO SE PUDO AGREGAR EL SUMMARY");
-                }
-                else
-                {
-                    callback(null,response);
-
-                }
-
-            });
+            callback(null,response);
         }
     });
 
@@ -170,37 +135,35 @@ function createGoogleSheet(entries,name,callback)
 {
 
     console.log("waterfall init for name:" + name);
+    async.waterfall([
 
-
-
-        async.waterfall([
-
-                function setAuth(step) {
-                    var creds = require('./JiraActivities-0db1f01c320f.json');
-                    doc.useServiceAccountAuth(creds, step);
-                },
-                function infoDoc(step) {
-                    doc.getInfo(function (err, info) {
-                        console.log('Loaded doc: ' + info.title + ' by ' + info.author.email);
-                        sheet = info.worksheets;
-                        step(null);
-                    });
-                },
-                checkAllSheet.bind(null, {name: name}),
-                createSheet.bind(null, {entries: entries, name: name}),
-    //            insertInSummarySheet.bind(null, {entries: entries, name: name})
-            ],
-            function (error, results) {
-                if (error) {
-                    console.log("Waterfall [Error]" + error.toString());
-                    return callback(error.toLocaleString());
-                }
-                else {
-                    console.log("finish waterfall for " + name)
-                    callback();
-                }
-            });
-
+            function setAuth(step) {
+                var creds = require('./JiraActivities-0db1f01c320f.json');
+                doc.useServiceAccountAuth(creds, step);
+            },
+            function infoDoc(step) {
+                doc.getInfo(function (err, info) {
+                    console.log('Loaded doc: ' + info.title + ' by ' + info.author.email);
+                    sheet = info.worksheets;
+                    step(null);
+                });
+            },
+            checkAllSheet.bind(null,{name:name}),
+            createSheet.bind(null,{entries:entries,name:name}),
+            insertInSummarySheet.bind(null,{entries:entries,name:name})
+        ],
+        function (error,results){
+            if (error)
+            {
+                console.log("Waterfall [Error]" + error.toString());
+                callback(error.toLocaleString());
+            }
+            else
+            {
+                console.log("finish waterfall for " + name)
+                callback();
+            }
+        });
 
 
 }
@@ -224,15 +187,12 @@ function insertInSummarySheet(ctx,step)
 
             }
             else {
-                setTimeout(function (){
-                    cb();
-                },300)
-
+                cb();
             }
 
         });
     }, function (err) {
-        console.log("[FINISH SUMMARY INSERTY");
+        console.log("[[[[[[[EACH FINISH]]]]]]");
         if (err) step(err);
         else
             step(null);
@@ -293,14 +253,10 @@ function createSheet(ctx,toCreate,step)
         var sheetByUser=sheet.filter(function (v,i,s){
             return v.title==ctx.name;
         });
-
        if (sheetByUser && sheetByUser.length>0) {
-           async.eachSeries(ctx.entries, function (ent, cb) {
+           async.each(ctx.entries, function (ent, cb) {
                var objToPersist = transform(ent);
-
                objToPersist["User"] = ctx.name;
-               allEntries.push((objToPersist));
-               sheetByUser[0]
                sheetByUser[0].addRow(objToPersist, function (err, result) {
                    if (err) {
                        console.log("error escribiendo " + err.toString());
@@ -308,16 +264,12 @@ function createSheet(ctx,toCreate,step)
 
                    }
                    else {
-                       setTimeout(function ()
-                       {
-                           cb();
-                       },250);
-
+                       cb();
                    }
 
                });
            }, function (err) {
-                   console.log("[FIN DE ADD ROW]");
+                   console.log("[[[[[[[EACH FINISH]]]]]]");
                    if (err) step(err);
                    else
                        step(null);
@@ -352,11 +304,9 @@ function addEntriesToWorkSheet(worksheet,entries,name)
 
 function transform(entry)
 {
-    var moment = require("moment");
-
     var obj={};
     obj["Link"]=entry["link"][0]["$"]["href"];;
-    obj["Updated"]=moment(entry["updated"][0],"YYYY-MM-DDThh:mm:ssZ").format("YYYY-MM-DD");
+    obj["Updated"]=entry["updated"][0];
     if (entry["activity:object"][0].hasOwnProperty("summary"))
     {
         obj["Summary"]=entry["activity:object"][0]["summary"][0]["_"];
