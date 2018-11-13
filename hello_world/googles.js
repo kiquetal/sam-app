@@ -14,8 +14,8 @@ exports.handler=function (event,context,callback)
 
 
 
-var developers=["enrique.melgarejo","felipe.hermosilla","jose.colman","andrea.forneron","luis.encina","jaqueline.probst","miguel.godoy","jorge.vallejos","ignacio.rojas","christian.benitez","juan.talavera"];
-//var developers=["enrique.melgarejo","felipe.hermosilla"];
+var developers=["enrique.melgarejo","anibal.acosta","santiago.tortora","felipe.hermosilla","jose.colman","andrea.forneron","luis.encina","jaqueline.probst","miguel.godoy","jorge.vallejos","ignacio.rojas","christian.benitez","juan.talavera","alexander.randazzo","agranja","guillermo.crocetti"];
+//var developers=["alexander.randazzo","agranja","guillermo.crocetti"];
 //obtainFeedJira();
 
 function testDate()
@@ -34,7 +34,7 @@ function obtainDateBetween()
 {
 
     var moment = require("moment");
-    var a = moment().subtract('2','day').startOf('day');
+    var a = moment().subtract('1','day').startOf('day');
     var b = moment().endOf('day').endOf('day');
 
 
@@ -144,7 +144,7 @@ function obtainFeedJira(callback) {
 
                     });
                     cb();
-                },250);
+                },300);
 
             },function (err)
             {
@@ -280,8 +280,7 @@ function createSheet(ctx,toCreate,step)
             }
             else {
                 console.log(JSON.stringify(worksheet));
-                addEntriesToWorkSheet(worksheet,ctx.entries,ctx.name);
-                step(null);
+                addEntriesToWorkSheet(worksheet,ctx.entries,ctx.name,step);
             }
 
         });
@@ -311,7 +310,7 @@ function createSheet(ctx,toCreate,step)
                        setTimeout(function ()
                        {
                            cb();
-                       },250);
+                       },300);
 
                    }
 
@@ -335,19 +334,33 @@ function createSheet(ctx,toCreate,step)
 
 }
 
-function addEntriesToWorkSheet(worksheet,entries,name)
+function addEntriesToWorkSheet(worksheet,entries,name,callback)
 {
-    entries.forEach(function (v,i,s){
+    async.eachSeries(entries,function (v,cb)
+{
         var objToPersist=transform(v);
+        allEntries.push(objToPersist);
         objToPersist["User"]=name;
-        worksheet.addRow(objToPersist,function (err,result){
-            if (err)
-            {
-                console.log("imposible crear registro");
-            }
+        setTimeout(function () {
+            worksheet.addRow(objToPersist, function (err, result) {
+                if (err) {
+                    console.log("imposible crear registro");
+                }
+                cb();
+            })
 
-        })
-    })
+        },300);
+    },function (err){
+       if (err)
+       {
+           console.log("Created new sheet for "+ name + "FAILED" + err.toLocaleString());
+           callback(err);
+       }
+       else {
+           console.log("Created new sheet for " + name + "SUCCESS");
+            callback(null);
+       }
+    });
 }
 
 function transform(entry)
@@ -377,7 +390,7 @@ function transform(entry)
 function isInBetweenDate(entry)
 {
     var moment = require("moment");
-    var a = moment().subtract('2','day').startOf('day');
+    var a = moment().subtract('1','day').startOf('day');
     var b = moment().endOf('day').endOf('day');
     var time=entry.updated[0];
     time=moment(time).utcOffset(time);
